@@ -1,9 +1,8 @@
 module Game (Game, GameStatus(..), Location, CellStatus(..), Action(..), init, update) where
 
 import Array exposing (Array)
-import Maybe exposing (andThen, withDefault)
+import Maybe exposing (andThen)
 import Random
-import Dict exposing (Dict)
 import Set exposing (Set)
 
 -- MODEL
