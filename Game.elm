@@ -1,9 +1,8 @@
 module Game (Game, GameStatus(..), Location, CellStatus(..), Action(..), init, update) where
 
 import Array exposing (Array)
-import Maybe exposing (andThen, withDefault)
+import Maybe exposing (andThen)
 import Random
-import Dict exposing (Dict)
 import Set exposing (Set)
 
 -- MODEL
@@ -302,31 +301,17 @@ findCellsToOpen' field locsToTest locsToOpen =
 
 
 updateCellInField : (Cell -> Cell) -> Location -> Field -> Field
-updateCellInField updater (x, y) field =
-    case Array.get y field of
-        Nothing -> field
-        Just row ->
-            case Array.get x row of
-                Nothing -> field
-                Just cell ->
-                    let updatedCell = updater cell
-                        updatedRow = Array.set x updatedCell row
-                    in
-                        Array.set y updatedRow field
+updateCellInField cellUpdater =
+    uncurry (arrayUpdate cellUpdater >> arrayUpdate)
 
 
 updateCellsInField : (Cell -> Cell) -> Set Location -> Field -> Field
-updateCellsInField updater locs field =
-    let rowMap = locsToRowMap locs
-    in
-        field |> Array.indexedMap (\y ->
-            case Dict.get y rowMap of
-                Nothing -> identity
-                Just cells ->
-                    Array.indexedMap (\x ->
-                        if List.member x cells then updater else identity
-                    )
+updateCellsInField cellUpdater locs =
+    Array.indexedMap (\y ->
+        Array.indexedMap (\x ->
+            if Set.member (x, y) locs then cellUpdater else identity
         )
+    )
 
 
 -- UTILS
@@ -340,18 +325,6 @@ addTuple (a, b) (a', b') =
 cartesianProduct a b =
     a |> List.map (,) |> List.concatMap (flip List.map b)
 
-{-| Creates a map that can be used with a nested Array.indexedMap to update an
-arbitrary set of elements in a 2D Array.
--}
-locsToRowMap : Set Location -> Dict Int (List Int)
-locsToRowMap locs =
-    let addToCellList x =
-            Just << (::) x << withDefault []
-        addToRowMap (x, y) =
-            Dict.update y (addToCellList x)
-    in
-        Set.foldl addToRowMap Dict.empty locs
-
 {-| Counts the number of locations in the 2D array that satisfy the given Bool
 function.
 -}
@@ -362,4 +335,10 @@ count f =
 
 lookupCells : Array (Array a) -> List Location -> List (Location, a)
 lookupCells field =
-    List.filterMap (\loc -> getCell field loc `andThen` (Just << (,) loc))
+    List.filterMap (\loc -> getCell field loc |> Maybe.map ((,) loc))
+
+arrayUpdate : (a -> a) -> Int -> Array a -> Array a
+arrayUpdate updater i array =
+    case Array.get i array of
+        Nothing -> array
+        Just v -> Array.set i (updater v) array
