@@ -10552,7 +10552,6 @@ Elm.Game.make = function (_elm) {
    $Array = Elm.Array.make(_elm),
    $Basics = Elm.Basics.make(_elm),
    $Debug = Elm.Debug.make(_elm),
-   $Dict = Elm.Dict.make(_elm),
    $List = Elm.List.make(_elm),
    $Maybe = Elm.Maybe.make(_elm),
    $Random = Elm.Random.make(_elm),
@@ -10560,55 +10559,28 @@ Elm.Game.make = function (_elm) {
    $Set = Elm.Set.make(_elm),
    $Signal = Elm.Signal.make(_elm);
    var _op = {};
+   var arrayUpdate = F3(function (updater,i,array) {
+      var _p0 = A2($Array.get,i,array);
+      if (_p0.ctor === "Nothing") {
+            return array;
+         } else {
+            return A3($Array.set,i,updater(_p0._0),array);
+         }
+   });
    var count = function (f) {
-      return A2($List.foldl,function (_p0) {    return F2(function (x,y) {    return x + y;})(function (b) {    return b ? 1 : 0;}(f(_p0)));},0);
-   };
-   var locsToRowMap = function (locs) {
-      var addToCellList = function (x) {
-         return function (_p1) {
-            return $Maybe.Just(A2(F2(function (x,y) {    return A2($List._op["::"],x,y);}),x,A2($Maybe.withDefault,_U.list([]),_p1)));
-         };
-      };
-      var addToRowMap = function (_p2) {    var _p3 = _p2;return A2($Dict.update,_p3._1,addToCellList(_p3._0));};
-      return A3($Set.foldl,addToRowMap,$Dict.empty,locs);
+      return A2($List.foldl,function (_p1) {    return F2(function (x,y) {    return x + y;})(function (b) {    return b ? 1 : 0;}(f(_p1)));},0);
    };
    var cartesianProduct = F2(function (a,b) {
       return A2($List.concatMap,A2($Basics.flip,$List.map,b),A2($List.map,F2(function (v0,v1) {    return {ctor: "_Tuple2",_0: v0,_1: v1};}),a));
    });
-   var addTuple = F2(function (_p5,_p4) {    var _p6 = _p5;var _p7 = _p4;return {ctor: "_Tuple2",_0: _p6._0 + _p7._0,_1: _p6._1 + _p7._1};});
+   var addTuple = F2(function (_p3,_p2) {    var _p4 = _p3;var _p5 = _p2;return {ctor: "_Tuple2",_0: _p4._0 + _p5._0,_1: _p4._1 + _p5._1};});
    var setStatus = F2(function (status,record) {    return _U.update(record,{status: status});});
-   var updateCellsInField = F3(function (updater,locs,field) {
-      var rowMap = locsToRowMap(locs);
-      return A2($Array.indexedMap,
-      function (y) {
-         var _p8 = A2($Dict.get,y,rowMap);
-         if (_p8.ctor === "Nothing") {
-               return $Basics.identity;
-            } else {
-               return $Array.indexedMap(function (x) {    return A2($List.member,x,_p8._0) ? updater : $Basics.identity;});
-            }
-      },
-      field);
+   var updateCellsInField = F2(function (cellUpdater,locs) {
+      return $Array.indexedMap(function (y) {
+         return $Array.indexedMap(function (x) {    return A2($Set.member,{ctor: "_Tuple2",_0: x,_1: y},locs) ? cellUpdater : $Basics.identity;});
+      });
    });
-   var updateCellInField = F3(function (updater,_p9,field) {
-      var _p10 = _p9;
-      var _p15 = _p10._1;
-      var _p14 = _p10._0;
-      var _p11 = A2($Array.get,_p15,field);
-      if (_p11.ctor === "Nothing") {
-            return field;
-         } else {
-            var _p13 = _p11._0;
-            var _p12 = A2($Array.get,_p14,_p13);
-            if (_p12.ctor === "Nothing") {
-                  return field;
-               } else {
-                  var updatedCell = updater(_p12._0);
-                  var updatedRow = A3($Array.set,_p14,updatedCell,_p13);
-                  return A3($Array.set,_p15,updatedRow,field);
-               }
-         }
-   });
+   var updateCellInField = function (cellUpdater) {    return $Basics.uncurry(function (_p6) {    return arrayUpdate(A2(arrayUpdate,cellUpdater,_p6));});};
    var ToggleFlag = function (a) {    return {ctor: "ToggleFlag",_0: a};};
    var Try = function (a) {    return {ctor: "Try",_0: a};};
    var createMineDistribution = F3(function (width,height,difficulty) {
@@ -10616,32 +10588,28 @@ Elm.Game.make = function (_elm) {
       var randomArray = F2(function (length,generator) {    return A2($Random.map,$Array.fromList,A2($Random.list,length,generator));});
       var rowGenerator = A2(randomArray,width,boolGenerator);
       var fieldGenerator = A2(randomArray,height,rowGenerator);
-      return function (_p16) {
-         return $Basics.fst(A2($Random.generate,fieldGenerator,_p16));
+      return function (_p7) {
+         return $Basics.fst(A2($Random.generate,fieldGenerator,_p7));
       };
    });
-   var getCell = F2(function (field,_p17) {    var _p18 = _p17;return A2($Maybe.andThen,A2($Array.get,_p18._1,field),$Array.get(_p18._0));});
+   var getCell = F2(function (field,_p8) {    var _p9 = _p8;return A2($Maybe.andThen,A2($Array.get,_p9._1,field),$Array.get(_p9._0));});
    var ifValidLoc = F3(function (updater,loc,game) {
-      var _p19 = A2(getCell,game.field,loc);
-      if (_p19.ctor === "Just") {
-            return A3(updater,loc,_p19._0,game);
+      var _p10 = A2(getCell,game.field,loc);
+      if (_p10.ctor === "Just") {
+            return A3(updater,loc,_p10._0,game);
          } else {
             return game;
          }
    });
    var lookupCells = function (field) {
       return $List.filterMap(function (loc) {
-         return A2($Maybe.andThen,
-         A2(getCell,field,loc),
-         function (_p20) {
-            return $Maybe.Just(A2(F2(function (v0,v1) {    return {ctor: "_Tuple2",_0: v0,_1: v1};}),loc,_p20));
-         });
+         return A2($Maybe.map,F2(function (v0,v1) {    return {ctor: "_Tuple2",_0: v0,_1: v1};})(loc),A2(getCell,field,loc));
       });
    };
    var neighborVectors = A2($List.filter,
    F2(function (x,y) {    return !_U.eq(x,y);})({ctor: "_Tuple2",_0: 0,_1: 0}),
    A2(cartesianProduct,_U.range(-1,1),_U.range(-1,1)));
-   var neighborLocs = function (_p21) {    return A3($Basics.flip,$List.map,neighborVectors,addTuple(_p21));};
+   var neighborLocs = function (_p11) {    return A3($Basics.flip,$List.map,neighborVectors,addTuple(_p11));};
    var Exploded = {ctor: "Exploded"};
    var Flagged = {ctor: "Flagged"};
    var Open = {ctor: "Open"};
@@ -10650,8 +10618,8 @@ Elm.Game.make = function (_elm) {
    });
    var Closed = {ctor: "Closed"};
    var toggleFlag = F3(function (loc,cell,game) {
-      var _p22 = cell.status;
-      switch (_p22.ctor)
+      var _p12 = cell.status;
+      switch (_p12.ctor)
       {case "Closed": return _U.update(game,{field: A3(updateCellInField,setStatus(Flagged),loc,game.field),flagCount: game.flagCount + 1});
          case "Flagged": return _U.update(game,{field: A3(updateCellInField,setStatus(Closed),loc,game.field),flagCount: game.flagCount - 1});
          default: return game;}
@@ -10659,8 +10627,8 @@ Elm.Game.make = function (_elm) {
    var findCellsToOpen$ = F3(function (field,locsToTest,locsToOpen) {
       findCellsToOpen$: while (true) {
          var newLocsToOpen = A2($List.filter,
-         function (_p23) {
-            return A2(F2(function (x,y) {    return _U.eq(x,y);}),Closed,function (_) {    return _.status;}($Basics.snd(_p23)));
+         function (_p13) {
+            return A2(F2(function (x,y) {    return _U.eq(x,y);}),Closed,function (_) {    return _.status;}($Basics.snd(_p13)));
          },
          A2(lookupCells,field,$Set.toList(locsToTest)));
          var updatedLocsToOpen = A3($Basics.flip,$Set.union,locsToOpen,$Set.fromList(A2($List.map,$Basics.fst,newLocsToOpen)));
@@ -10668,19 +10636,19 @@ Elm.Game.make = function (_elm) {
          $Set.diff,
          updatedLocsToOpen,
          $Set.fromList(A2($List.concatMap,
-         function (_p24) {
-            return neighborLocs($Basics.fst(_p24));
+         function (_p14) {
+            return neighborLocs($Basics.fst(_p14));
          },
          A2($List.filter,
-         function (_p25) {
-            return A2(F2(function (x,y) {    return _U.eq(x,y);}),0,function (_) {    return _.closeMines;}($Basics.snd(_p25)));
+         function (_p15) {
+            return A2(F2(function (x,y) {    return _U.eq(x,y);}),0,function (_) {    return _.closeMines;}($Basics.snd(_p15)));
          },
          newLocsToOpen))));
          if (_U.eq($Set.size(updatedLocsToTest),0)) return updatedLocsToOpen; else {
-               var _v10 = field,_v11 = updatedLocsToTest,_v12 = updatedLocsToOpen;
-               field = _v10;
-               locsToTest = _v11;
-               locsToOpen = _v12;
+               var _v6 = field,_v7 = updatedLocsToTest,_v8 = updatedLocsToOpen;
+               field = _v6;
+               locsToTest = _v7;
+               locsToOpen = _v8;
                continue findCellsToOpen$;
             }
       }
@@ -10702,41 +10670,41 @@ Elm.Game.make = function (_elm) {
    var openNeighbors$ = F3(function (loc,cell,game) {
       var neighbors = A2(lookupCells,game.field,neighborLocs(loc));
       var closedCells = A2($List.filter,
-      function (_p26) {
-         return A2(F2(function (x,y) {    return _U.eq(x,y);}),Closed,function (_) {    return _.status;}($Basics.snd(_p26)));
+      function (_p16) {
+         return A2(F2(function (x,y) {    return _U.eq(x,y);}),Closed,function (_) {    return _.status;}($Basics.snd(_p16)));
       },
       neighbors);
       var flags = A2(count,
-      function (_p27) {
-         return A2(F2(function (x,y) {    return _U.eq(x,y);}),Flagged,function (_) {    return _.status;}($Basics.snd(_p27)));
+      function (_p17) {
+         return A2(F2(function (x,y) {    return _U.eq(x,y);}),Flagged,function (_) {    return _.status;}($Basics.snd(_p17)));
       },
       neighbors);
       var explodingCells = $Set.fromList(A2($List.map,
       $Basics.fst,
-      A2($List.filter,function (_p28) {    var _p29 = _p28;var _p30 = _p29._1;return _p30.mine && !_U.eq(_p30.status,Flagged);},neighbors)));
+      A2($List.filter,function (_p18) {    var _p19 = _p18;var _p20 = _p19._1;return _p20.mine && !_U.eq(_p20.status,Flagged);},neighbors)));
       return _U.eq($List.length(closedCells),0) || !_U.eq(flags,cell.closeMines) ? game : _U.cmp($Set.size(explodingCells),0) > 0 ? _U.update(game,
       {field: A3(updateCellsInField,setStatus(Exploded),explodingCells,game.field),status: GameOver}) : A2(openAll,
       game,
-      $Set.fromList(A2($List.concatMap,function (_p31) {    return $Set.toList(A2(findCellsToOpen,game,_p31));},A2($List.map,$Basics.fst,closedCells))));
+      $Set.fromList(A2($List.concatMap,function (_p21) {    return $Set.toList(A2(findCellsToOpen,game,_p21));},A2($List.map,$Basics.fst,closedCells))));
    });
    var openNeighbors = F2(function (loc,cell) {    return _U.eq(cell.closeMines,0) ? $Basics.identity : A2(openNeighbors$,loc,cell);});
    var tryCell = F3(function (loc,cell,game) {
-      var _p32 = cell.status;
-      switch (_p32.ctor)
+      var _p22 = cell.status;
+      switch (_p22.ctor)
       {case "Closed": return A3(openCell,loc,cell,game);
          case "Open": return A3(openNeighbors,loc,cell,game);
          default: return game;}
    });
    var Playing = {ctor: "Playing"};
    var update = F2(function (action,game) {
-      var _p33 = game.status;
-      if (_p33.ctor === "Playing") {
+      var _p23 = game.status;
+      if (_p23.ctor === "Playing") {
             var updatedGame = function () {
-               var _p34 = action;
-               if (_p34.ctor === "Try") {
-                     return A3(ifValidLoc,tryCell,_p34._0,game);
+               var _p24 = action;
+               if (_p24.ctor === "Try") {
+                     return A3(ifValidLoc,tryCell,_p24._0,game);
                   } else {
-                     return A3(ifValidLoc,toggleFlag,_p34._0,game);
+                     return A3(ifValidLoc,toggleFlag,_p24._0,game);
                   }
             }();
             var gameWon = _U.eq(updatedGame.status,Playing) && _U.eq(updatedGame.openCount + updatedGame.mineCount,updatedGame.totalCount);
@@ -10752,8 +10720,8 @@ Elm.Game.make = function (_elm) {
       var createRow = function (y) {    return $Array.indexedMap(A2(createCell,mines,y));};
       var field = A2($Array.indexedMap,createRow,mines);
       var mineCount = A3($Array.foldl,
-      function (_p35) {
-         return F2(function (x,y) {    return x + y;})($Array.length(A2($Array.filter,$Basics.identity,_p35)));
+      function (_p25) {
+         return F2(function (x,y) {    return x + y;})($Array.length(A2($Array.filter,$Basics.identity,_p25)));
       },
       0,
       mines);
